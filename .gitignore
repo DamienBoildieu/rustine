@@ -1,0 +1,8 @@
+/target
+
+*.lock
+
+*.jpg
+*.png
+*.obj
+*.mtl

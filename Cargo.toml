@@ -1,0 +1,25 @@
+[package]
+name = "rustine"
+version = "0.1.0"
+edition = "2024"
+exclude = ["assets/"]
+
+[dependencies]
+anyhow = "1.0.98"
+bytemuck = { version = "1.23.2", features = ["derive"] }
+env_logger = "0.11.8"
+futures-lite = "2.6.1"
+image = { version = "0.25.6", features = ["png", "jpeg"] }
+log = "0.4.27"
+nalgebra = { version = "0.34.0", features = ["bytemuck"] }
+pollster = "0.4.0"
+tobj = { version = "4.0.3", features = ["futures"] }
+wgpu = "26.0.1"
+winit = "0.30.12"
+
+[[example]]
+name = "learn_wgpu"
+path = "examples/learn_wgpu.rs"
+
+[target."cfg(wasm32)".dependencies]
+reqwest = "0.12.23"
