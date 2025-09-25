@@ -1,6 +1,8 @@
 use std::ops::Range;
 
-use crate::graphics::Texture;
+use nalgebra as na;
+
+use crate::graphics::{Descriptable, Texture};
 
 pub struct Material {
     pub name: String,
@@ -19,6 +21,29 @@ pub struct ModelMesh {
 pub struct Model {
     pub meshes: Vec<ModelMesh>,
     pub materials: Vec<Material>,
+}
+
+// TODO: Evaluate if qvoiding copy the data to a "raw" has an impact on a sceen with a lot of them
+pub struct Instance {
+    pub transform: na::Similarity3<f32>,
+}
+
+// tmp conversion
+impl Instance {
+    pub fn to_raw(&self) -> InstanceRaw {
+        InstanceRaw {
+            model: self.transform.to_homogeneous().into(),
+            normal: na::Matrix3::from(self.transform.isometry.rotation).into(),
+        }
+    }
+}
+
+// TODO: Create a dedictated module for bindable data
+#[repr(C)]
+#[derive(Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
+pub struct InstanceRaw {
+    model: [[f32; 4]; 4],
+    normal: [[f32; 3]; 3],
 }
 
 pub trait DrawModel {

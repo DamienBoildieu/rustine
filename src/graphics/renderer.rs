@@ -2,7 +2,7 @@
 
 use crate::{
     graphics::{
-        Camera, CameraController, DepthTexture, Descriptable, DrawLight, DrawModel, LightUniform, Model, ModelVertex,
+        Camera, CameraController, DepthTexture, Descriptable, DrawLight, DrawModel, Instance, InstanceRaw, LightUniform, Model, ModelVertex
     },
     resources,
 };
@@ -37,7 +37,7 @@ pub struct Renderer {
     // To move in game
     pub camera_controller: CameraController,
     // Instances
-    instances: Vec<na::Matrix4<f32>>,
+    instances: Vec<Instance>,
     instance_buffer: wgpu::Buffer,
     obj_model: Model,
     // Lights
@@ -221,16 +221,17 @@ impl Renderer {
                             consts::FRAC_PI_4,
                         )
                     };
-                    na::Similarity3::from_parts(position, rotation, 1.0).to_homogeneous()
+                    Instance {transform: na::Similarity3::from_parts(position, rotation, 1.0) }
                 })
             })
             .collect::<Vec<_>>();
 
         // For create_buffer_init
         use wgpu::util::DeviceExt;
+        let instance_data = instances.iter().map(Instance::to_raw).collect::<Vec<_>>();
         let instance_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Instance Buffer"),
-            contents: bytemuck::cast_slice(&instances),
+            contents: bytemuck::cast_slice(&instance_data),
             usage: wgpu::BufferUsages::VERTEX,
         });
 
@@ -331,7 +332,7 @@ impl Renderer {
                 &render_pipeline_layout,
                 config.format,
                 Some(DepthTexture::DEPTH_FORMAT),
-                &[ModelVertex::desc(), na::Matrix4::desc()],
+                &[ModelVertex::desc(), InstanceRaw::desc()],
                 shader,
             )
         };
