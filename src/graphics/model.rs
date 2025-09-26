@@ -2,7 +2,7 @@ use std::ops::Range;
 
 use nalgebra as na;
 
-use crate::graphics::{Descriptable, Texture};
+use crate::graphics::Texture;
 
 pub struct Material {
     pub name: String,
