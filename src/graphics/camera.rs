@@ -18,6 +18,29 @@ impl Camera {
             na::Isometry3::look_at_rh(&self.eye, &self.target, &self.up);
         let projection = na::Perspective3::new(self.aspect, self.fovy, self.znear, self.zfar);
 
-        utils::OPENGL_TO_WGPU_MATRIX * (projection.as_projective() * view).matrix()
+        *(projection.as_projective() * view).matrix()
+    }
+}
+
+#[repr(C)]
+#[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
+pub struct CameraUniform {
+    view_position: [f32; 4],
+    view_proj: [[f32; 4]; 4],
+}
+
+impl CameraUniform {
+    pub fn new() -> Self {
+        Self {
+            view_position: [0.0; 4],
+            view_proj: na::Matrix4::identity().into(),
+        }
+    }
+
+    pub fn update_view_proj(&mut self, camera: &Camera) {
+        // We're using Vector4 because of the uniforms 16 byte spacing requirement
+        self.view_position = camera.eye.to_homogeneous().into();
+        self.view_proj =
+            (utils::OPENGL_TO_WGPU_MATRIX * camera.build_view_projection_matrix()).into();
     }
 }

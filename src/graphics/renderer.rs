@@ -2,7 +2,8 @@
 
 use crate::{
     graphics::{
-        Camera, CameraController, DepthTexture, Descriptable, DrawLight, DrawModel, Instance, InstanceRaw, LightUniform, Model, ModelVertex
+        Camera, CameraController, CameraUniform, DepthTexture, Descriptable, DrawLight, DrawModel,
+        Instance, InstanceRaw, LightUniform, Model, ModelVertex,
     },
     resources,
 };
@@ -32,6 +33,7 @@ pub struct Renderer {
     is_surface_configured: bool,
     render_pipeline: wgpu::RenderPipeline,
     depth_texture: DepthTexture,
+    camera_uniform: CameraUniform,
     camera_bind_group: wgpu::BindGroup,
     camera_buffer: wgpu::Buffer,
     // To move in game
@@ -154,9 +156,12 @@ impl Renderer {
             zfar: 100.0,
         };
 
+        let mut camera_uniform = CameraUniform::new();
+        camera_uniform.update_view_proj(&camera);
+
         let camera_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Camera Buffer"),
-            contents: bytemuck::cast_slice(camera.build_view_projection_matrix().as_slice()),
+            contents: bytemuck::cast_slice(&[camera_uniform]),
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
         });
 
@@ -164,7 +169,7 @@ impl Renderer {
             device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
                 entries: &[wgpu::BindGroupLayoutEntry {
                     binding: 0,
-                    visibility: wgpu::ShaderStages::VERTEX,
+                    visibility: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
                     ty: wgpu::BindingType::Buffer {
                         ty: wgpu::BufferBindingType::Uniform,
                         has_dynamic_offset: false,
@@ -221,7 +226,9 @@ impl Renderer {
                             consts::FRAC_PI_4,
                         )
                     };
-                    Instance {transform: na::Similarity3::from_parts(position, rotation, 1.0) }
+                    Instance {
+                        transform: na::Similarity3::from_parts(position, rotation, 1.0),
+                    }
                 })
             })
             .collect::<Vec<_>>();
@@ -293,7 +300,9 @@ impl Renderer {
             });
             let shader = wgpu::ShaderModuleDescriptor {
                 label: Some("Light Shader"),
-                source: wgpu::ShaderSource::Wgsl(include_str!("../../assets/shaders/light.wgsl").into()),
+                source: wgpu::ShaderSource::Wgsl(
+                    include_str!("../../assets/shaders/light.wgsl").into(),
+                ),
             };
             create_render_pipeline(
                 &device,
@@ -356,6 +365,7 @@ impl Renderer {
             is_surface_configured: true,
             render_pipeline,
             depth_texture,
+            camera_uniform,
             camera_bind_group,
             camera_buffer,
             camera_controller,
@@ -415,7 +425,7 @@ impl Renderer {
                 &self.obj_model,
                 &self.camera_bind_group,
                 &self.light_bind_group,
-            ); 
+            );
 
             // Main pass
             render_pass.set_pipeline(&self.render_pipeline);
@@ -450,10 +460,11 @@ impl Renderer {
     // To move somewhere else
     pub fn update_camera(&mut self) {
         self.camera_controller.update_camera(&mut self.camera);
+        self.camera_uniform.update_view_proj(&self.camera);
         self.queue.write_buffer(
             &self.camera_buffer,
             0,
-            bytemuck::cast_slice(self.camera.build_view_projection_matrix().as_slice()),
+            bytemuck::cast_slice(&[self.camera_uniform]),
         );
     }
 
