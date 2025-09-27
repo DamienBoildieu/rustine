@@ -75,7 +75,8 @@ pub async fn load_model(
         // TODO: Replace unwrap
         let texture_path = parent.join(m.diffuse_texture.unwrap()).into_os_string().into_string().unwrap();
         let diffuse_texture = load_texture(&texture_path, device, queue).await?;
-        let normal_texture = load_texture(&m.normal_texture.unwrap(), device, queue).await?;
+        let normal_path = parent.join(m.normal_texture.unwrap()).into_os_string().into_string().unwrap();
+        let normal_texture = load_texture(&normal_path, device, queue).await?;
 
         materials.push(Material::new(device, &m.name, diffuse_texture, normal_texture, layout));
     }
