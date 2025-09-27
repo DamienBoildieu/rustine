@@ -7,6 +7,7 @@ use crate::graphics::Texture;
 pub struct Material {
     pub name: String,
     pub diffuse_texture: Texture,
+    pub normal_texture: Texture,
     pub bind_group: wgpu::BindGroup,
 }
 
@@ -26,6 +27,47 @@ pub struct Model {
 // TODO: Evaluate if qvoiding copy the data to a "raw" has an impact on a sceen with a lot of them
 pub struct Instance {
     pub transform: na::Similarity3<f32>,
+}
+
+impl Material {
+    pub fn new(
+        device: &wgpu::Device,
+        name: &str,
+        diffuse_texture: Texture,
+        normal_texture: Texture,
+        layout: &wgpu::BindGroupLayout,
+    ) -> Self {
+        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: wgpu::BindingResource::TextureView(&diffuse_texture.view),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: wgpu::BindingResource::Sampler(&diffuse_texture.sampler),
+                },
+                // NEW!
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: wgpu::BindingResource::TextureView(&normal_texture.view),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 3,
+                    resource: wgpu::BindingResource::Sampler(&normal_texture.sampler),
+                },
+            ],
+            label: Some(name),
+        });
+
+        Self {
+            name: String::from(name),
+            diffuse_texture,
+            normal_texture,
+            bind_group,
+        }
+    }
 }
 
 // tmp conversion

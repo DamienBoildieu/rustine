@@ -75,26 +75,9 @@ pub async fn load_model(
         // TODO: Replace unwrap
         let texture_path = parent.join(m.diffuse_texture.unwrap()).into_os_string().into_string().unwrap();
         let diffuse_texture = load_texture(&texture_path, device, queue).await?;
-        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: wgpu::BindingResource::TextureView(&diffuse_texture.view),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: wgpu::BindingResource::Sampler(&diffuse_texture.sampler),
-                },
-            ],
-            label: None,
-        });
+        let normal_texture = load_texture(&m.normal_texture.unwrap(), device, queue).await?;
 
-        materials.push(Material {
-            name: m.name,
-            diffuse_texture,
-            bind_group,
-        })
+        materials.push(Material::new(device, &m.name, diffuse_texture, normal_texture, layout));
     }
 
     let meshes = models
