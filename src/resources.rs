@@ -35,11 +35,10 @@ pub async fn load_texture(
     Texture::from_bytes(device, queue, &data, file_name)
 }
 
-
 /// Load a model from a .obj file.
-/// 
+///
 /// Assume all the model files are in the same folder as the .obj file.
-/// 
+///
 /// use futures-lite instead of async due to deprecation of async in tobj.
 /// It might change when refactoring
 pub async fn load_model(
@@ -73,12 +72,26 @@ pub async fn load_model(
     let mut materials = Vec::new();
     for m in obj_materials? {
         // TODO: Replace unwrap
-        let texture_path = parent.join(m.diffuse_texture.unwrap()).into_os_string().into_string().unwrap();
+        let texture_path = parent
+            .join(m.diffuse_texture.unwrap())
+            .into_os_string()
+            .into_string()
+            .unwrap();
         let diffuse_texture = load_texture(&texture_path, device, queue).await?;
-        let normal_path = parent.join(m.normal_texture.unwrap()).into_os_string().into_string().unwrap();
+        let normal_path = parent
+            .join(m.normal_texture.unwrap())
+            .into_os_string()
+            .into_string()
+            .unwrap();
         let normal_texture = load_texture(&normal_path, device, queue).await?;
 
-        materials.push(Material::new(device, &m.name, diffuse_texture, normal_texture, layout));
+        materials.push(Material::new(
+            device,
+            &m.name,
+            diffuse_texture,
+            normal_texture,
+            layout,
+        ));
     }
 
     let meshes = models
@@ -97,7 +110,10 @@ pub async fn load_model(
                                 m.mesh.texcoords[i * 2],
                                 1.0 - m.mesh.texcoords[i * 2 + 1],
                             ],
-                            normal: [0.0, 0.0, 0.0],
+                            normal: [0.0; 3],
+                            // We'll calculate these later
+                            tangent: [0.0; 3],
+                            bitangent: [0.0; 3],
                         }
                     } else {
                         ModelVertex {
@@ -115,6 +131,9 @@ pub async fn load_model(
                                 m.mesh.normals[i * 3 + 1],
                                 m.mesh.normals[i * 3 + 2],
                             ],
+                            // We'll calculate these later
+                            tangent: [0.0; 3],
+                            bitangent: [0.0; 3],
                         }
                     }
                 })
