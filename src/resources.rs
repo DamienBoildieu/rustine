@@ -29,11 +29,12 @@ pub async fn load_binary(file_name: &str) -> anyhow::Result<Vec<u8>> {
 
 pub async fn load_texture(
     file_name: &str,
+    is_normal_map: bool,
     device: &wgpu::Device,
     queue: &wgpu::Queue,
 ) -> anyhow::Result<Texture> {
     let data = load_binary(file_name).await?;
-    Texture::from_bytes(device, queue, &data, file_name)
+    Texture::from_bytes(device, queue, &data, file_name, is_normal_map)
 }
 
 /// Load a model from a .obj file.
@@ -78,13 +79,13 @@ pub async fn load_model(
             .into_os_string()
             .into_string()
             .unwrap();
-        let diffuse_texture = load_texture(&texture_path, device, queue).await?;
+        let diffuse_texture = load_texture(&texture_path, false, device, queue).await?;
         let normal_path = parent
             .join(m.normal_texture.unwrap())
             .into_os_string()
             .into_string()
             .unwrap();
-        let normal_texture = load_texture(&normal_path, device, queue).await?;
+        let normal_texture = load_texture(&normal_path, true, device, queue).await?;
 
         materials.push(Material::new(
             device,
