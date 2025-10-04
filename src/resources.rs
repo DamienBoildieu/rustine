@@ -6,6 +6,7 @@ use std::io::{BufReader, Cursor};
 use crate::graphics::{Material, Model, ModelMesh, ModelVertex, Texture};
 
 use futures_lite::io::{BufReader as FuturesBufReader, Cursor as FuturesCursor};
+use nalgebra as na;
 use wgpu::util::DeviceExt;
 
 pub async fn load_string(file_name: &str) -> anyhow::Result<String> {
@@ -97,47 +98,102 @@ pub async fn load_model(
     let meshes = models
         .into_iter()
         .map(|m| {
-            let vertices = (0..m.mesh.positions.len() / 3)
+            let mut vertices = (0..m.mesh.positions.len() / 3)
                 .map(|i| {
-                    if m.mesh.normals.is_empty() {
-                        ModelVertex {
-                            position: [
-                                m.mesh.positions[i * 3],
-                                m.mesh.positions[i * 3 + 1],
-                                m.mesh.positions[i * 3 + 2],
-                            ],
-                            tex_coords: [
-                                m.mesh.texcoords[i * 2],
-                                1.0 - m.mesh.texcoords[i * 2 + 1],
-                            ],
-                            normal: [0.0; 3],
-                            // We'll calculate these later
-                            tangent: [0.0; 3],
-                            bitangent: [0.0; 3],
-                        }
+                    let normals = if m.mesh.normals.is_empty() {
+                        // Need to be computed from geometry
+                        [0.0, 0.0, 0.0]
                     } else {
-                        ModelVertex {
-                            position: [
-                                m.mesh.positions[i * 3],
-                                m.mesh.positions[i * 3 + 1],
-                                m.mesh.positions[i * 3 + 2],
-                            ],
-                            tex_coords: [
-                                m.mesh.texcoords[i * 2],
-                                1.0 - m.mesh.texcoords[i * 2 + 1],
-                            ],
-                            normal: [
-                                m.mesh.normals[i * 3],
-                                m.mesh.normals[i * 3 + 1],
-                                m.mesh.normals[i * 3 + 2],
-                            ],
-                            // We'll calculate these later
-                            tangent: [0.0; 3],
-                            bitangent: [0.0; 3],
-                        }
+                        [
+                            m.mesh.normals[i * 3],
+                            m.mesh.normals[i * 3 + 1],
+                            m.mesh.normals[i * 3 + 2],
+                        ]
+                    };
+                    ModelVertex {
+                        position: [
+                            m.mesh.positions[i * 3],
+                            m.mesh.positions[i * 3 + 1],
+                            m.mesh.positions[i * 3 + 2],
+                        ],
+                        tex_coords: [m.mesh.texcoords[i * 2], 1.0 - m.mesh.texcoords[i * 2 + 1]],
+                        normal: normals,
+                        // We'll calculate these later
+                        tangent: [0.0; 3],
+                        bitangent: [0.0; 3],
                     }
                 })
                 .collect::<Vec<_>>();
+
+            let indices = &m.mesh.indices;
+            let mut triangles_included = vec![0; vertices.len()];
+
+            // Calculate tangents and bitangets. We're going to
+            // use the triangles, so we need to loop through the
+            // indices in chunks of 3
+            // TODO: Use nalgebra for the vector members
+            for c in indices.chunks(3) {
+                let v0 = vertices[c[0] as usize];
+                let v1 = vertices[c[1] as usize];
+                let v2 = vertices[c[2] as usize];
+
+                let pos0: na::Vector3<_> = v0.position.into();
+                let pos1: na::Vector3<_> = v1.position.into();
+                let pos2: na::Vector3<_> = v2.position.into();
+
+                let uv0: na::Vector2<_> = v0.tex_coords.into();
+                let uv1: na::Vector2<_> = v1.tex_coords.into();
+                let uv2: na::Vector2<_> = v2.tex_coords.into();
+
+                // Calculate the edges of the triangle
+                let delta_pos1 = pos1 - pos0;
+                let delta_pos2 = pos2 - pos0;
+
+                // This will give us a direction to calculate the
+                // tangent and bitangent
+                let delta_uv1 = uv1 - uv0;
+                let delta_uv2 = uv2 - uv0;
+
+                // Solving the following system of equations will
+                // give us the tangent and bitangent.
+                //     delta_pos1 = delta_uv1.x * T + delta_u.y * B
+                //     delta_pos2 = delta_uv2.x * T + delta_uv2.y * B
+                // See https://gamedev.stackexchange.com/questions/68612/how-to-compute-tangent-and-bitangent-vectors
+                let r = 1.0 / (delta_uv1.x * delta_uv2.y - delta_uv1.y * delta_uv2.x);
+                let tangent = (delta_pos1 * delta_uv2.y - delta_pos2 * delta_uv1.y) * r;
+                // We flip the bitangent to enable right-handed normal
+                // maps with wgpu texture coordinate system
+                let bitangent = (delta_pos2 * delta_uv1.x - delta_pos1 * delta_uv2.x) * -r;
+
+                // We'll use the same tangent/bitangent for each vertex in the triangle
+                vertices[c[0] as usize].tangent =
+                    (tangent + na::Vector3::from(vertices[c[0] as usize].tangent)).into();
+                vertices[c[1] as usize].tangent =
+                    (tangent + na::Vector3::from(vertices[c[1] as usize].tangent)).into();
+                vertices[c[2] as usize].tangent =
+                    (tangent + na::Vector3::from(vertices[c[2] as usize].tangent)).into();
+                vertices[c[0] as usize].bitangent =
+                    (bitangent + na::Vector3::from(vertices[c[0] as usize].bitangent)).into();
+                vertices[c[1] as usize].bitangent =
+                    (bitangent + na::Vector3::from(vertices[c[1] as usize].bitangent)).into();
+                vertices[c[2] as usize].bitangent =
+                    (bitangent + na::Vector3::from(vertices[c[2] as usize].bitangent)).into();
+
+                // Optional: Compute normal here if missing (cross product)
+
+                // Used to average the tangents/bitangents
+                triangles_included[c[0] as usize] += 1;
+                triangles_included[c[1] as usize] += 1;
+                triangles_included[c[2] as usize] += 1;
+            }
+
+            // Average the tangents/bitangents
+            for (i, n) in triangles_included.into_iter().enumerate() {
+                let denom = 1.0 / n as f32;
+                let v = &mut vertices[i];
+                v.tangent = (na::Vector3::from(v.tangent) * denom).into();
+                v.bitangent = (na::Vector3::from(v.bitangent) * denom).into();
+            }
 
             let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some(&format!("{:?} Vertex Buffer", file_name)),

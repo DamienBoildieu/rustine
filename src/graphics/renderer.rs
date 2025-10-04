@@ -486,7 +486,7 @@ impl Renderer {
         );
     }
 
-    pub fn update_light(&mut self) {
+    pub fn update_light_position(&mut self) {
         let old_position: na::Vector3<_> = self.light_uniform.position.into();
         self.light_uniform.position =
             (na::UnitQuaternion::from_axis_angle(&na::Vector3::y_axis(), 1.0f32.to_radians())
@@ -497,6 +497,11 @@ impl Renderer {
             0,
             bytemuck::cast_slice(&[self.light_uniform]),
         );
+    }
+
+    pub fn update_light_color(&mut self, color: wgpu::Color) {
+        self.clear_color = color;
+        self.light_uniform.color = [color.r as f32, color.g as f32, color.b as f32];
     }
 }
 

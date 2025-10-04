@@ -48,7 +48,7 @@ impl WindowApp {
         match (button, is_pressed) {
             (MouseButton::Left, true) => {
                 let renderer = self.renderer.as_mut().unwrap();
-                renderer.clear_color = self.game.position_color;
+                renderer.update_light_color(self.game.position_color);
             }
             _ => {}
         }
@@ -98,7 +98,7 @@ impl ApplicationHandler for WindowApp {
                 // applications which do not always need to. Applications that redraw continuously
                 // can render here instead.
 
-                renderer.update_light();
+                renderer.update_light_position();
                 renderer.update_camera();
                 // renderer.update_model();
                 window.request_redraw();
