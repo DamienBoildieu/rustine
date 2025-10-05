@@ -3,8 +3,7 @@
 
 use winit::event_loop::{ControlFlow, EventLoop};
 
-use rustine::game::Game;
-use rustine::graphics::Renderer;
+use rustine::graphics::{CameraController, Renderer};
 
 use std::sync::Arc;
 
@@ -14,6 +13,25 @@ use winit::event::{DeviceId, KeyEvent, MouseButton, WindowEvent};
 use winit::event_loop::ActiveEventLoop;
 use winit::keyboard::{KeyCode, PhysicalKey};
 use winit::window::{Window, WindowId};
+
+pub struct Game {
+    pub position_color: wgpu::Color,
+    pub camera_controller: CameraController,
+}
+
+impl Default for Game {
+    fn default() -> Self {
+        Game {
+            position_color: wgpu::Color {
+                r: 0.,
+                g: 0.,
+                b: 0.5,
+                a: 1.,
+            },
+            camera_controller: CameraController::new(0.02),
+        }
+    }
+}
 
 #[derive(Default)]
 pub struct WindowApp {
