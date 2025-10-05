@@ -155,7 +155,6 @@ impl ApplicationHandler for WindowApp {
     }
 }
 
-
 fn main() -> Result<(), winit::error::EventLoopError> {
     env_logger::init();
 
