@@ -9,6 +9,7 @@ mod renderer;
 mod texture;
 mod utils;
 mod vertex;
+mod scene;
 
 pub use camera::*;
 pub use camera_controller::*;
@@ -20,3 +21,4 @@ pub use primitives::*;
 pub use renderer::*;
 pub use texture::*;
 pub use vertex::*;
+pub use scene::*;
