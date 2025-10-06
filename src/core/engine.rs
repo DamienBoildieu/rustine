@@ -1,5 +1,8 @@
-struct Engine {
-    current_scene: Scene,
+use crate::graphics;
+use crate::core;
+
+pub struct Engine {
+    current_scene: core::Scene,
     renderer: graphics::Renderer,
 }
 
