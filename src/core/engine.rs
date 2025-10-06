@@ -7,7 +7,7 @@ pub struct Engine {
 }
 
 impl Engine {
-    fn update(&mut self) {
+    pub fn update(&mut self) {
         // Update logic here
     }
 }
