@@ -25,7 +25,7 @@ impl Engine {
         // Main loop (simplified)
         loop {
             self.update();
-            // self.current_scene.render(&mut self.renderer);
+            self.current_scene.render(&mut self.renderer);
             // Break condition for the loop would go here
             break; // Placeholder to prevent infinite loop in this example
         }
