@@ -12,6 +12,7 @@ use std::f32::consts;
 use std::sync::Arc;
 
 use nalgebra as na;
+use wgpu;
 use winit::window::Window;
 
 const NUM_INSTANCES_PER_ROW: u32 = 10;
@@ -20,6 +21,23 @@ const INSTANCE_DISPLACEMENT: na::Point3<f32> = na::Point3::new(
     0.0,
     NUM_INSTANCES_PER_ROW as f32 * 0.5,
 );
+
+
+pub trait Bindable {
+    fn get_bind_group(&self, device: &wgpu::Device) -> &wgpu::BindGroup;
+}
+
+pub struct UniformVariable {
+
+}
+
+pub struct RenderingPipeline {
+
+}
+
+impl UniformVariable {
+    pub fn create_buffer(&mut self, device: &wgpu::Device) {}
+}
 
 // Will use vertex buffer object for instances as it's done in learn wgpu tutorial. Might be changed later
 
@@ -397,7 +415,7 @@ impl Renderer {
         })
     }
 
-    pub fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
+    pub fn render(&self) -> Result<(), wgpu::SurfaceError> {
         if !self.is_surface_configured {
             return Ok(());
         }
